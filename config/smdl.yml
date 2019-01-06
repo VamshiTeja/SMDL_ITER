@@ -1,0 +1,37 @@
+# General Configutaions
+run_label: 'f_mnist_simplenet_random_full'
+gpu_ids: '0'
+seed: 99                        # '0' means no manual seeding
+
+# Learning Configurations
+repeat_rounds: 1
+
+# Neural Network Architecture
+model: ResNet18                 # Possible values: {SimpleNet, ResNet18, ResNet20, ResNet32}
+
+# Dataset Configurations
+dataset:
+    name: ' CIFAR'               # Possible values: CIFAR - [10, 100], SVHN, MNIST, FashionMNIST, EMNIST
+    total_num_classes: 10
+
+# Preload model for Warm-Up
+# Loads the specified model. Ignored if set to ''.
+pretrained_model: ''
+#pretrained_model: '/home/joseph/workspace/SMDL/output/Warm_up_model_Random_CIFAR_10_ResNet20_1125_201252/models/round_1_epoch_3.pth'
+
+# Training Configurations
+epochs: 40
+
+batch_size: 50
+batch_size_test: 100
+
+learning_rate: 0.1
+momentum: 0.9
+weight_decay: 0.0001
+
+use_custom_batch_selector: True
+override_submodular_sampling: True  # If True: random sampling Else, submodular sampling
+
+num_of_partitions: 10           # Partitions for distributed submodular selection
+
+ltl_log_ep: 5                   # log(1/eps) : "Lazier Than Lazy Greedy, Mirzasoleiman et al. AAAI 2015"
