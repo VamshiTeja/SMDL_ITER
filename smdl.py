@@ -136,10 +136,10 @@ def train_iter(train_loader, model, criterion, optimizer, epoch_count,
     except OSError:
         log('Gracefully handling {}'.format(OSError))
 
-    log('Round: {0:3d}/{1}\t  Epoch {2:3d}/{3} ' \
+    log('Round: {0:3d}/{1}\t  Epoch {2:3d} ' \
           '\t Loss: {loss.val:.4f}({loss.avg:.4f}) ' \
           '\t Training_Accuracy: {accuracy.val:.4f}({accuracy.avg:.4f})'.format(round_count + 1, max_rounds,
-                                                                                epoch_count + 1, max_epoch,
+                                                                                epoch_count + 1,
                                                                                 loss=losses, accuracy=top1))
     return train_acc_between_epochs, test_acc_between_epochs, losses_between_epochs, logged_iters
 
