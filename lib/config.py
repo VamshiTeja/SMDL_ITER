@@ -42,6 +42,9 @@ root.dataset.memory_budget = 2000
 
 root.ltl_log_ep = 5                  # log(1/eps) : "Lazier Than Lazy Greedy, Mirzasoleiman et al. AAAI 2015"
 
+root.use_iter = True
+root.max_iters = 100000
+
 def _merge_a_into_b(a, b):
     """
     Merge config dictionary a into config dictionary b, clobbering the

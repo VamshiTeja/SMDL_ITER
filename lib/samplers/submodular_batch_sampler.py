@@ -6,6 +6,8 @@ from submodular import SubModSampler
 from lib.utils import log
 from lib.config import cfg
 import numpy as np
+from operator import itemgetter
+
 
 class SubmodularBatchSampler(Sampler):
     """
@@ -31,6 +33,7 @@ class SubmodularBatchSampler(Sampler):
                              "drop_last={}".format(drop_last))
 
         self.sampler = sampler
+        self.dataset = data_source
         self.batch_size = batch_size
         self.drop_last = drop_last
         self.override_submodular_sampling = cfg.override_submodular_sampling
@@ -43,8 +46,13 @@ class SubmodularBatchSampler(Sampler):
             for idx in self.sampler:
                 batch.append(idx)
                 if len(batch) == self.batch_size:
-                    yield batch
+                    yield itemgetter(*batch)(self.dataset)
                     batch = []
+        elif(cfg.use_iter):
+            batch = self.submodular_sampler.get_subset()
+            a = self.dataset.data
+            b = self.dataset.targets
+            yield np.take(self.dataset.data, batch, axis=0), np.take(self.dataset.targets, batch, axis=0)
         else:
             #r = np.random.random()
             r=1
@@ -54,7 +62,7 @@ class SubmodularBatchSampler(Sampler):
                 t_stamp = time.time()
                 batch = self.submodular_sampler.get_subset()
                 log('Fetched {0} of {1} in {2} seconds.'.format(i, len(self.sampler) // self.batch_size, time.time()-t_stamp))
-                yield batch
+                yield itemgetter(*batch)(self.dataset)
 
         if len(batch) > 0 and not self.drop_last:
             yield batch
