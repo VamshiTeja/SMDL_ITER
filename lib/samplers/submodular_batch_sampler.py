@@ -46,7 +46,7 @@ class SubmodularBatchSampler(Sampler):
             for idx in self.sampler:
                 batch.append(idx)
                 if len(batch) == self.batch_size:
-                    yield itemgetter(*batch)(self.dataset)
+                    yield np.take(self.dataset.data, batch, axis=0), np.take(self.dataset.targets, batch, axis=0)
                     batch = []
         elif(cfg.use_iter):
             batch = self.submodular_sampler.get_subset()
@@ -62,7 +62,7 @@ class SubmodularBatchSampler(Sampler):
                 t_stamp = time.time()
                 batch = self.submodular_sampler.get_subset()
                 log('Fetched {0} of {1} in {2} seconds.'.format(i, len(self.sampler) // self.batch_size, time.time()-t_stamp))
-                yield itemgetter(*batch)(self.dataset)
+                yield np.take(self.dataset.data, batch, axis=0), np.take(self.dataset.targets, batch, axis=0)
 
         if len(batch) > 0 and not self.drop_last:
             yield batch

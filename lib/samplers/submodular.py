@@ -26,6 +26,9 @@ class SubModSampler(Sampler):
         p_log_p = F.softmax(f_acts, dim=1) * F.log_softmax(f_acts, dim=1)
         H = -p_log_p.numpy()
         self.H = np.sum(H,axis=1)                       # Compute entropy of all samples for an epoch.
+        dist = [1./len(self.dataset)]*len(self.dataset)
+        self.dist = dist
+
 
     def get_subset(self, detailed_logging=False):
 
@@ -41,14 +44,17 @@ class SubModSampler(Sampler):
             pool_handlers = []
             for partition in partitions:
                 handler = pool.apply_async(get_subset_indices, args=(partition, self.penultimate_activations, self.final_activations,
-                                                self.H, self.batch_size, r_size))
+                                                self.H, self.batch_size, r_size, self.dist))
                 pool_handlers.append(handler)
             pool.close()
             pool.join()
 
             intermediate_indices = []
+            self.dist = []
             for handler in pool_handlers:
-                intermediate_indices.extend(handler.get())
+                res = handler.get()
+                intermediate_indices.extend(res[0])
+                self.dist.append(res[1])
         else:
             intermediate_indices = self.index_set
 
@@ -58,18 +64,23 @@ class SubModSampler(Sampler):
             log('\nSelected {0} items from {1} partitions: {2} items.'.format(self.batch_size, num_of_partitions, len(intermediate_indices)))
             log('Size of random sample: {}'.format(r_size))
 
-        subset_indices = get_subset_indices(intermediate_indices, self.penultimate_activations, self.final_activations, self.H,
-                                            self.batch_size, r_size)
+        subset_indices, dist2level = get_subset_indices(intermediate_indices, self.penultimate_activations, self.final_activations, self.H,
+                                            self.batch_size, r_size, self.dist)
 
-        for item in subset_indices:     # Subset selection without replacement.
-            self.index_set.remove(item)
+        #Update distribution at 2nd level based on adaboost
+        self.dist[intermediate_indices] = dist2level
+        self.dist = self.dist/np.sum(self.dist)
+
+        # Subset selection without replacement.
+        #for item in subset_indices:
+        #    self.index_set.remove(item)
 
         if detailed_logging:
             log('The selected {0} indices (second level): {1}'.format(len(subset_indices), subset_indices))
         return subset_indices
 
 
-def get_subset_indices(index_set_input, penultimate_activations, final_activations, entropy,  subset_size, r_size, alpha_1=1, alpha_2=1, alpha_3=1):
+def get_subset_indices(index_set_input, penultimate_activations, final_activations, entropy,  subset_size, r_size, dist, alpha_1=1., alpha_2=1., alpha_3=1., alpha_4=0.5):
 
     if r_size < len(index_set_input):
         index_set = np.random.choice(index_set_input, r_size, replace=False)
@@ -93,15 +104,24 @@ def get_subset_indices(index_set_input, penultimate_activations, final_activatio
 
         md_scores = compute_md_score(penultimate_activations, list(index_set), class_mean)
 
-        scores = normalise(np.array(u_scores)) + normalise(np.array(r_scores)) + normalise(np.array(md_scores))
+        #print(np.array(dist).shape)
+        dist_scores = alpha_4*np.take(np.array(dist), index_set)
+        scores = normalise(np.array(u_scores)) + normalise(np.array(r_scores)) + normalise(np.array(md_scores)) + dist_scores
 
         best_item_index = np.argmax(scores)
         subset_indices.append(index_set[best_item_index])
+
+
+        # Update distribution based on adaboost
+        dist[index_set[best_item_index]] = dist[index_set[best_item_index]]*np.exp(-scores[best_item_index])
+        dist = dist/np.sum(dist)
+
         index_set = np.delete(index_set, best_item_index, axis=0)
 
         # log('Processed: {0}/{1} exemplars. Time taken is {2} sec.'.format(i, subset_size, time.time()-now))
 
-    return subset_indices
+    return (subset_indices, np.take(np.array(dist), index_set_input))
+    #return subset_indices
 
 def normalise(A):
     std = np.std(A)
@@ -109,6 +129,11 @@ def normalise(A):
         std = 1
     A = (A-np.mean(A))/std
     return A
+
+def update_dist(dist_arr, submod_score):
+    dist_arr = np.dot(dist_arr, np.exp(-submod_score))
+    dist_arr = dist_arr/np.sum(dist_arr)
+    return  dist_arr
 
 def compute_d_score(penultimate_activations, subset_indices, alpha=1.):
     """

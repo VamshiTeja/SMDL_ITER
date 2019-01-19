@@ -38,4 +38,4 @@ ltl_log_ep: 5                   # log(1/eps) : "Lazier Than Lazy Greedy, Mirzaso
 
 use_iter: True
 
-max_iters: 100000
+max_iters: 5000

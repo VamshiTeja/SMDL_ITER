@@ -90,7 +90,7 @@ def submodular_training(gpus):
 
 def train_iter(train_loader, model, criterion, optimizer, epoch_count,
           round_count, max_rounds, logging_freq=10, detailed_logging=True, test_freq=10, test_inbetween_epoch=True,
-          test_loader=None, num_iters=10000, iters_done=100, max_iters=100000):
+          test_loader=None, num_iters=10000, iters_done=100, max_iters=5000):
     losses = Metrics()
     top1 = Metrics()
 
