@@ -27,7 +27,7 @@ class SubModSampler(Sampler):
         H = -p_log_p.numpy()
         self.H = np.sum(H,axis=1)                       # Compute entropy of all samples for an epoch.
         dist = [1./len(self.dataset)]*len(self.dataset)
-        self.dist = dist
+        self.dist = np.array(dist)
 
 
     def get_subset(self, detailed_logging=False):
@@ -50,11 +50,14 @@ class SubModSampler(Sampler):
             pool.join()
 
             intermediate_indices = []
-            self.dist = []
-            for handler in pool_handlers:
+            dist_updated = []
+            for (k,handler) in enumerate(pool_handlers):
                 res = handler.get()
                 intermediate_indices.extend(res[0])
-                self.dist.append(res[1])
+                dist_k = res[1]
+                dist_updated.extend(dist_k[np.array(partitions[k])])
+            self.dist = np.array(dist_updated)
+            self.dist = self.dist / np.sum(self.dist)
         else:
             intermediate_indices = self.index_set
 
@@ -68,7 +71,7 @@ class SubModSampler(Sampler):
                                             self.batch_size, r_size, self.dist)
 
         #Update distribution at 2nd level based on adaboost
-        self.dist[intermediate_indices] = dist2level
+        self.dist = dist2level
         self.dist = self.dist/np.sum(self.dist)
 
         # Subset selection without replacement.
@@ -111,16 +114,16 @@ def get_subset_indices(index_set_input, penultimate_activations, final_activatio
         best_item_index = np.argmax(scores)
         subset_indices.append(index_set[best_item_index])
 
-
         # Update distribution based on adaboost
-        dist[index_set[best_item_index]] = dist[index_set[best_item_index]]*np.exp(-scores[best_item_index])
+        dist[np.array(index_set[best_item_index])] = dist[np.array(index_set[best_item_index])]*np.exp(-scores[best_item_index])
         dist = dist/np.sum(dist)
 
         index_set = np.delete(index_set, best_item_index, axis=0)
 
         # log('Processed: {0}/{1} exemplars. Time taken is {2} sec.'.format(i, subset_size, time.time()-now))
 
-    return (subset_indices, np.take(np.array(dist), index_set_input))
+
+    return (subset_indices, dist)
     #return subset_indices
 
 def normalise(A):
