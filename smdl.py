@@ -170,7 +170,7 @@ def test(test_loader, model, epoch_count, round_count, max_rounds, logging_freq=
         log('Round: {0:3d}/{1}\t  Epoch {2:3d} Iteration {3}/{4}' \
             '\t Testing_Accuracy: {accuracy.val:.4f}({accuracy.avg:.4f})'.format(round_count + 1, max_rounds,
                                                                                  epoch_count + 1, iteration,
-                                                                                 max_iteration, accuracy=top1))
+                                                                                 max_iteration, accuracy=top1.avg))
 
     return top1.avg
 
